@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <?php 
-$con=mysqli_connect("localhost","root","","myhmsdb");
+session_start();
+$con=mysqli_connect("localhost","root","password123","myhmsdb");
 
 include('newfunc.php');
 
@@ -236,9 +237,31 @@ if(isset($_POST['docsub1']))
                 </div>
                 </div>
                         
-
-      
-                
+                <!-- Adding Statistical Visualizations -->
+                <div class="row" style="margin-top: 5%;">
+                  <div class="col-sm-12">
+                    <div class="panel panel-white no-radius">
+                      <div class="panel-heading">
+                        <h4 class="panel-title text-center">Hospital Statistics</h4>
+                      </div>
+                      <div class="panel-body">
+                        <div class="row">
+                          <div class="col-sm-6">
+                            <div class="chart-container" style="position: relative; height:300px; width:100%">
+                              <canvas id="doctorPatientChart"></canvas>
+                            </div>
+                          </div>
+                          <div class="col-sm-6">
+                            <div class="chart-container" style="position: relative; height:300px; width:100%">
+                              <canvas id="appointmentStatusChart"></canvas>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <!-- End Statistical Visualizations -->
               </div>
             </div>
       
@@ -272,7 +295,7 @@ if(isset($_POST['docsub1']))
                 </thead>
                 <tbody>
                   <?php 
-                    $con=mysqli_connect("localhost","root","","myhmsdb");
+                    $con=mysqli_connect("localhost","root","password123","myhmsdb");
                     global $con;
                     $query = "select * from doctb";
                     $result = mysqli_query($con,$query);
@@ -323,7 +346,7 @@ if(isset($_POST['docsub1']))
                 </thead>
                 <tbody>
                   <?php 
-                    $con=mysqli_connect("localhost","root","","myhmsdb");
+                    $con=mysqli_connect("localhost","root","password123","myhmsdb");
                     global $con;
                     $query = "select * from patreg";
                     $result = mysqli_query($con,$query);
@@ -379,7 +402,7 @@ if(isset($_POST['docsub1']))
                 </thead>
                 <tbody>
                   <?php 
-                    $con=mysqli_connect("localhost","root","","myhmsdb");
+                    $con=mysqli_connect("localhost","root","password123","myhmsdb");
                     global $con;
                     $query = "select * from prestb";
                     $result = mysqli_query($con,$query);
@@ -451,7 +474,7 @@ if(isset($_POST['docsub1']))
                 <tbody>
                   <?php 
 
-                    $con=mysqli_connect("localhost","root","","myhmsdb");
+                    $con=mysqli_connect("localhost","root","password123","myhmsdb");
                     global $con;
 
                     $query = "select * from appointmenttb;";
@@ -561,7 +584,7 @@ if(isset($_POST['docsub1']))
                 <tbody>
                   <?php 
 
-                    $con=mysqli_connect("localhost","root","","myhmsdb");
+                    $con=mysqli_connect("localhost","root","password123","myhmsdb");
                     global $con;
 
                     $query = "select * from contact;";
@@ -597,5 +620,141 @@ if(isset($_POST['docsub1']))
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.11.0/umd/popper.min.js" integrity="sha384-b/U6ypiBEHpOf/4+1nzFpr53nxSS+GLCkfwBdFNTxtclqqenISfwAzpKaMNFNmj4" crossorigin="anonymous"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/js/bootstrap.min.js" integrity="sha384-h0AbiXch4ZDo7tp9hKZ4TsHbi047NrKGLO3SEJAg45jXxnGIfYzk4Si90RDIqNm1" crossorigin="anonymous"></script>
    <script src="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/6.10.1/sweetalert2.all.min.js"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', function() {
+      // Fetch data from the database
+      <?php
+        $con = mysqli_connect("localhost", "root", "password123", "myhmsdb");
+        
+        // Doctor count
+        $doctorQuery = "SELECT COUNT(*) as doctorCount FROM doctb";
+        $doctorResult = mysqli_query($con, $doctorQuery);
+        $doctorRow = mysqli_fetch_assoc($doctorResult);
+        $doctorCount = $doctorRow['doctorCount'];
+        
+        // Patient count
+        $patientQuery = "SELECT COUNT(*) as patientCount FROM patreg";
+        $patientResult = mysqli_query($con, $patientQuery);
+        $patientRow = mysqli_fetch_assoc($patientResult);
+        $patientCount = $patientRow['patientCount'];
+        
+        // Appointment status counts
+        $activeQuery = "SELECT COUNT(*) as activeCount FROM appointmenttb WHERE userStatus=1 AND doctorStatus=1";
+        $activeResult = mysqli_query($con, $activeQuery);
+        $activeRow = mysqli_fetch_assoc($activeResult);
+        $activeCount = $activeRow['activeCount'];
+        
+        $cancelledByPatientQuery = "SELECT COUNT(*) as cancelledByPatientCount FROM appointmenttb WHERE userStatus=0 AND doctorStatus=1";
+        $cancelledByPatientResult = mysqli_query($con, $cancelledByPatientQuery);
+        $cancelledByPatientRow = mysqli_fetch_assoc($cancelledByPatientResult);
+        $cancelledByPatientCount = $cancelledByPatientRow['cancelledByPatientCount'];
+        
+        $cancelledByDoctorQuery = "SELECT COUNT(*) as cancelledByDoctorCount FROM appointmenttb WHERE userStatus=1 AND doctorStatus=0";
+        $cancelledByDoctorResult = mysqli_query($con, $cancelledByDoctorQuery);
+        $cancelledByDoctorRow = mysqli_fetch_assoc($cancelledByDoctorResult);
+        $cancelledByDoctorCount = $cancelledByDoctorRow['cancelledByDoctorCount'];
+        
+        // Get top specializations
+        $specQuery = "SELECT spec, COUNT(*) as count FROM doctb GROUP BY spec ORDER BY count DESC LIMIT 5";
+        $specResult = mysqli_query($con, $specQuery);
+        $specs = [];
+        $specCounts = [];
+        
+        while($specRow = mysqli_fetch_assoc($specResult)) {
+          $specs[] = $specRow['spec'];
+          $specCounts[] = $specRow['count'];
+        }
+      ?>
+      
+      // Doctor-Patient Ratio Chart
+      var dpctx = document.getElementById('doctorPatientChart').getContext('2d');
+      var doctorPatientChart = new Chart(dpctx, {
+        type: 'bar',
+        data: {
+          labels: ['Doctors', 'Patients', 'Doctor:Patient Ratio'],
+          datasets: [{
+            label: 'Count',
+            data: [
+              <?php echo $doctorCount; ?>, 
+              <?php echo $patientCount; ?>, 
+              <?php echo round($patientCount/$doctorCount, 2); ?>
+            ],
+            backgroundColor: [
+              'rgba(54, 162, 235, 0.7)',
+              'rgba(255, 99, 132, 0.7)',
+              'rgba(75, 192, 192, 0.7)'
+            ],
+            borderColor: [
+              'rgba(54, 162, 235, 1)',
+              'rgba(255, 99, 132, 1)',
+              'rgba(75, 192, 192, 1)'
+            ],
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            title: {
+              display: true,
+              text: 'Doctor-Patient Distribution',
+              font: {
+                size: 16
+              }
+            },
+            legend: {
+              display: false
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true
+            }
+          }
+        }
+      });
+      
+      // Appointment Status Chart
+      var asctx = document.getElementById('appointmentStatusChart').getContext('2d');
+      var appointmentStatusChart = new Chart(asctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Active', 'Cancelled by Patient', 'Cancelled by Doctor'],
+          datasets: [{
+            data: [
+              <?php echo $activeCount; ?>, 
+              <?php echo $cancelledByPatientCount; ?>, 
+              <?php echo $cancelledByDoctorCount; ?>
+            ],
+            backgroundColor: [
+              'rgba(75, 192, 192, 0.7)',
+              'rgba(255, 99, 132, 0.7)',
+              'rgba(255, 206, 86, 0.7)'
+            ],
+            borderColor: [
+              'rgba(75, 192, 192, 1)',
+              'rgba(255, 99, 132, 1)',
+              'rgba(255, 206, 86, 1)'
+            ],
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            title: {
+              display: true,
+              text: 'Appointment Status Distribution',
+              font: {
+                size: 16
+              }
+            }
+          }
+        }
+      });
+    });
+  </script>
   </body>
 </html>

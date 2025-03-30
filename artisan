@@ -1,0 +1,79 @@
+#!/usr/bin/env php
+<?php
+/**
+ * Hospital Management System Artisan-like CLI
+ * Mimics Laravel's artisan commands for familiar workflow
+ */
+
+// Define application base path
+define('BASE_PATH', __DIR__);
+
+// Get the command argument
+$command = isset($argv[1]) ? $argv[1] : null;
+$options = array_slice($argv, 2);
+
+// Handle different commands
+switch ($command) {
+    case 'serve':
+        // Run the development server
+        echo "Starting the development server...\n";
+        require_once 'serve.php';
+        break;
+        
+    case 'db:import':
+        // Import database
+        $dbName = 'myhmsdb';
+        $dbUser = 'root';
+        $dbPass = isset($options[0]) ? $options[0] : '';
+        
+        echo "Importing database schema and data...\n";
+        $command = "mysql -u {$dbUser} " . 
+                  ($dbPass ? "-p{$dbPass} " : "") . 
+                  "{$dbName} < " . BASE_PATH . "/myhmsdb.sql";
+                  
+        echo "Running: " . preg_replace('/-p\S+/', '-p[PASSWORD]', $command) . "\n";
+        system($command, $returnCode);
+        
+        if ($returnCode === 0) {
+            echo "Database imported successfully!\n";
+        } else {
+            echo "Error importing database. Exit code: {$returnCode}\n";
+        }
+        break;
+        
+    case 'db:create':
+        // Create database
+        $dbName = 'myhmsdb';
+        $dbUser = 'root';
+        $dbPass = isset($options[0]) ? $options[0] : '';
+        
+        echo "Creating database '{$dbName}'...\n";
+        $createCmd = "mysql -u {$dbUser} " . 
+                    ($dbPass ? "-p{$dbPass} " : "") . 
+                    "-e 'CREATE DATABASE IF NOT EXISTS {$dbName}'";
+                    
+        echo "Running: " . preg_replace('/-p\S+/', '-p[PASSWORD]', $createCmd) . "\n";
+        system($createCmd, $returnCode);
+        
+        if ($returnCode === 0) {
+            echo "Database created successfully!\n";
+        } else {
+            echo "Error creating database. Exit code: {$returnCode}\n";
+        }
+        break;
+        
+    case 'help':
+    default:
+        echo "Hospital Management System CLI\n";
+        echo "================================\n\n";
+        echo "Available commands:\n";
+        echo "  serve           Start the development server\n";
+        echo "  db:create       Create the database\n";
+        echo "  db:import       Import the database schema and data\n";
+        echo "  help            Display this help message\n\n";
+        echo "Example usage:\n";
+        echo "  php artisan serve\n";
+        echo "  php artisan db:create [password]\n";
+        echo "  php artisan db:import [password]\n";
+        break;
+} 

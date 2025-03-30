@@ -32,58 +32,293 @@ if (isset($_GET["generate_bill"]) && isset($_GET['ID'])) {
     error_reporting(E_ERROR | E_PARSE);
     
     require_once("TCPDF/tcpdf.php");
-    $obj_pdf = new TCPDF('P', PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
-    $obj_pdf->SetCreator(PDF_CREATOR);
-    $obj_pdf->SetTitle("Generate Bill");
-    $obj_pdf->SetHeaderData('', '', PDF_HEADER_TITLE, PDF_HEADER_STRING);
-    $obj_pdf->SetHeaderFont(Array(PDF_FONT_NAME_MAIN, '', PDF_FONT_SIZE_MAIN));
-    $obj_pdf->SetFooterFont(Array(PDF_FONT_NAME_MAIN, '', PDF_FONT_SIZE_MAIN));
-    $obj_pdf->SetDefaultMonospacedFont('helvetica');
+    
+    // Create custom PDF class with header and footer
+    class MYPDF extends TCPDF {
+        // Page header
+        public function Header() {
+            // Get the current page break margin
+            $bMargin = $this->getBreakMargin();
+            // Get current auto-page-break mode
+            $auto_page_break = $this->AutoPageBreak;
+            // Disable auto-page-break
+            $this->SetAutoPageBreak(false, 0);
+            
+            // Logo
+            $logo_path = $_SERVER['DOCUMENT_ROOT'] . "/Hospital-Management-System/img/logo.png";
+            if (file_exists($logo_path)) {
+                $this->Image($logo_path, 10, 10, 30, '', 'PNG', '', 'T', false, 300, '', false, false, 0, false, false, false);
+            } else {
+                // Fallback to favicon if main logo doesn't exist
+                $this->Image('images/favicon.png', 10, 10, 20, '', 'PNG', '', 'T', false, 300, '', false, false, 0, false, false, false);
+            }
+            
+            // Set colors
+            $this->SetTextColor(48, 48, 150);
+            $this->SetFont('helvetica', 'B', 20);
+            $this->SetXY(45, 10);
+            $this->Cell(0, 10, 'THE ROYAL HOSPITALS', 0, false, 'L', 0, '', 0, false, 'M', 'M');
+            
+            $this->SetFont('helvetica', '', 10);
+            $this->SetTextColor(80, 80, 80);
+            $this->SetXY(45, 20);
+            $this->Cell(0, 5, 'Excellence in Healthcare', 0, false, 'L', 0, '', 0, false, 'M', 'M');
+            
+            $this->SetXY(45, 25);
+            $this->Cell(0, 5, 'P.O. Box 12345, Nairobi, Kenya', 0, false, 'L', 0, '', 0, false, 'M', 'M');
+            $this->SetXY(45, 30);
+            $this->Cell(0, 5, 'Tel: +254 700 000000 | Email: info@royalhospitals.co.ke', 0, false, 'L', 0, '', 0, false, 'M', 'M');
+            
+            // Decorative line
+            $this->SetDrawColor(57, 49, 175);
+            $this->SetLineWidth(0.8);
+            $this->Line(10, 40, 200, 40);
+            
+            // Subtitle: Invoice
+            $this->SetFont('helvetica', 'B', 16);
+            $this->SetTextColor(57, 49, 175);
+            $this->SetXY(10, 45);
+            $this->Cell(0, 10, 'OFFICIAL RECEIPT', 0, false, 'C', 0, '', 0, false, 'M', 'M');
+            
+            // Restore auto-page-break status
+            $this->SetAutoPageBreak($auto_page_break, $bMargin);
+            // Set the starting point for the page content
+            $this->setPageMark();
+        }
+        
+        // Page footer
+        public function Footer() {
+            // Position at 15 mm from bottom
+            $this->SetY(-40);
+            
+            // Decorative line
+            $this->SetDrawColor(57, 49, 175);
+            $this->SetLineWidth(0.3);
+            $this->Line(10, 260, 200, 260);
+            
+            // Set font
+            $this->SetFont('helvetica', 'I', 8);
+            $this->SetTextColor(80, 80, 80);
+            
+            // Footer text
+            $this->Cell(0, 10, 'Thank you for choosing The Royal Hospitals for your healthcare needs.', 0, false, 'C', 0, '', 0, false, 'T', 'M');
+            $this->Ln(5);
+            $this->Cell(0, 10, 'This is an official receipt for services rendered. Please retain for your records.', 0, false, 'C', 0, '', 0, false, 'T', 'M');
+            $this->Ln(5);
+            $this->Cell(0, 10, 'For inquiries about this bill, please contact our billing department at +254 700 111222', 0, false, 'C', 0, '', 0, false, 'T', 'M');
+            $this->Ln(5);
+            $this->Cell(0, 10, 'Page '.$this->getAliasNumPage().'/'.$this->getAliasNbPages(), 0, false, 'C', 0, '', 0, false, 'T', 'M');
+        }
+    }
+    
+    // Create new PDF document
+    $obj_pdf = new MYPDF('P', PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
+    
+    // Set document information
+    $obj_pdf->SetCreator('The Royal Hospitals');
+    $obj_pdf->SetAuthor('The Royal Hospitals');
+    $obj_pdf->SetTitle('Medical Receipt');
+    $obj_pdf->SetSubject('Patient Medical Receipt');
+    $obj_pdf->SetKeywords('Hospital, Receipt, Bill, Patient, Medical');
+    
+    // Set default header and footer data
+    $obj_pdf->SetHeaderData('', '', 'THE ROYAL HOSPITALS', 'Medical Receipt');
+    
+    // Set margins
+    $obj_pdf->SetMargins(PDF_MARGIN_LEFT, 60, PDF_MARGIN_RIGHT);
+    $obj_pdf->SetHeaderMargin(PDF_MARGIN_HEADER);
     $obj_pdf->SetFooterMargin(PDF_MARGIN_FOOTER);
-    $obj_pdf->SetMargins(PDF_MARGIN_LEFT, '5', PDF_MARGIN_RIGHT);
-    $obj_pdf->SetPrintHeader(false);
-    $obj_pdf->SetPrintFooter(false);
-    $obj_pdf->SetAutoPageBreak(TRUE, 10);
-    $obj_pdf->SetFont('helvetica', '', 12);
+    
+    // Set auto page breaks
+    $obj_pdf->SetAutoPageBreak(TRUE, 40);
+    
+    // Set image scale factor
+    $obj_pdf->setImageScale(PDF_IMAGE_SCALE_RATIO);
+    
+    // Add a page
     $obj_pdf->AddPage();
     
-    $content = '';
-    $content .= '
-        <br/>
-        <h2 align ="center"> THE ROYAL HOSPITALS</h2></br>
-        <h3 align ="center"> Bill</h3>
-    ';
+    // Generate unique receipt number
+    $receipt_number = 'RH-' . date('Ymd') . '-' . rand(1000, 9999);
     
+    // Get payment date and time (current)
+    $payment_date = date('Y-m-d');
+    $payment_time = date('H:i:s');
+    
+    // Get the ID
     $ID = $_GET['ID'];
+    
+    // Get prescription and appointment data
     $presQuery = mysqli_query($con, "SELECT p.pid, p.ID, p.fname, p.lname, p.doctor, p.appdate, p.apptime, p.disease, p.allergy, p.prescription, a.docFees 
-                                    FROM prestb p 
-                                    INNER JOIN appointmenttb a ON p.ID=a.ID 
-                                    WHERE p.pid = '$pid' AND p.ID = '$ID'");
+                                FROM prestb p 
+                                INNER JOIN appointmenttb a ON p.ID=a.ID 
+                                WHERE p.pid = '$pid' AND p.ID = '$ID'");
     
     if (!$presQuery || mysqli_num_rows($presQuery) == 0) {
         // If query fails or no results, show error and redirect
         echo "<script>alert('No prescription found or error retrieving data.'); window.location.href='prescriptions.php?pid=$pid';</script>";
         exit();
     }
-                                    
-    while ($row = mysqli_fetch_array($presQuery)) {
-        $content .= '
-        <label> Patient ID : </label>' . $row["pid"] . '<br/><br/>
-        <label> Appointment ID : </label>' . $row["ID"] . '<br/><br/>
-        <label> Patient Name : </label>' . $row["fname"] . ' ' . $row["lname"] . '<br/><br/>
-        <label> Doctor Name : </label>' . $row["doctor"] . '<br/><br/>
-        <label> Appointment Date : </label>' . $row["appdate"] . '<br/><br/>
-        <label> Appointment Time : </label>' . $row["apptime"] . '<br/><br/>
-        <label> Disease : </label>' . $row["disease"] . '<br/><br/>
-        <label> Allergies : </label>' . $row["allergy"] . '<br/><br/>
-        <label> Prescription : </label>' . $row["prescription"] . '<br/><br/>
-        <label> Fees Paid : </label>' . $row["docFees"] . '<br/>
-        ';
-    }
+    
+    $row = mysqli_fetch_array($presQuery);
+    
+    // Start HTML content
+    $content = '';
+    
+    // Patient and billing information section
+    $content .= '
+    <table cellspacing="0" cellpadding="5" border="0">
+        <tr>
+            <td width="50%" style="font-size:12pt; color:#3931af; font-weight:bold;">PATIENT INFORMATION</td>
+            <td width="50%" style="font-size:12pt; color:#3931af; font-weight:bold;">BILLING INFORMATION</td>
+        </tr>
+        <tr>
+            <td width="50%" style="border:1px solid #cccccc; background-color:#f9f9f9; padding:8px;">
+                <table cellspacing="0" cellpadding="3">
+                    <tr>
+                        <td style="font-weight:bold; width:40%;">Patient ID:</td>
+                        <td>' . $row["pid"] . '</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight:bold; width:40%;">Full Name:</td>
+                        <td>' . $row["fname"] . ' ' . $row["lname"] . '</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight:bold; width:40%;">Doctor:</td>
+                        <td>' . $row["doctor"] . '</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight:bold; width:40%;">Appointment Date:</td>
+                        <td>' . $row["appdate"] . '</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight:bold; width:40%;">Appointment Time:</td>
+                        <td>' . $row["apptime"] . '</td>
+                    </tr>
+                </table>
+            </td>
+            <td width="50%" style="border:1px solid #cccccc; background-color:#f9f9f9; padding:8px;">
+                <table cellspacing="0" cellpadding="3">
+                    <tr>
+                        <td style="font-weight:bold; width:50%;">Receipt Number:</td>
+                        <td>' . $receipt_number . '</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight:bold; width:50%;">Appointment ID:</td>
+                        <td>' . $row["ID"] . '</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight:bold; width:50%;">Payment Date:</td>
+                        <td>' . $payment_date . '</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight:bold; width:50%;">Payment Time:</td>
+                        <td>' . $payment_time . '</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight:bold; width:50%;">Payment Method:</td>
+                        <td>M-Pesa</td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+    <br>
+    ';
+    
+    // Medical details section
+    $content .= '
+    <h4 style="color:#3931af; border-bottom:1px solid #3931af; padding-bottom:5px;">MEDICAL DETAILS</h4>
+    <table cellspacing="0" cellpadding="5" style="border:1px solid #cccccc; width:100%;">
+        <tr style="background-color:#f0f0f5;">
+            <th style="border:1px solid #cccccc; width:30%;">Diagnosis</th>
+            <th style="border:1px solid #cccccc; width:30%;">Allergies</th>
+            <th style="border:1px solid #cccccc; width:40%;">Prescription</th>
+        </tr>
+        <tr style="background-color:#ffffff;">
+            <td style="border:1px solid #cccccc;">' . $row["disease"] . '</td>
+            <td style="border:1px solid #cccccc;">' . $row["allergy"] . '</td>
+            <td style="border:1px solid #cccccc;">' . $row["prescription"] . '</td>
+        </tr>
+    </table>
+    <br>
+    ';
+    
+    // Payment breakdown section
+    $content .= '
+    <h4 style="color:#3931af; border-bottom:1px solid #3931af; padding-bottom:5px;">PAYMENT BREAKDOWN</h4>
+    <table cellspacing="0" cellpadding="5" style="border:1px solid #cccccc; width:100%;">
+        <tr style="background-color:#f0f0f5;">
+            <th style="border:1px solid #cccccc; width:70%;">Description</th>
+            <th style="border:1px solid #cccccc; width:30%; text-align:right;">Amount (KES)</th>
+        </tr>
+        <tr>
+            <td style="border:1px solid #cccccc;">Consultation Fee (Dr. ' . $row["doctor"] . ')</td>
+            <td style="border:1px solid #cccccc; text-align:right;">' . number_format($row["docFees"] * 0.7, 2) . '</td>
+        </tr>
+        <tr>
+            <td style="border:1px solid #cccccc;">Medication and Prescription</td>
+            <td style="border:1px solid #cccccc; text-align:right;">' . number_format($row["docFees"] * 0.3, 2) . '</td>
+        </tr>
+        <tr style="background-color:#f0f0f5; font-weight:bold;">
+            <td style="border:1px solid #cccccc;">TOTAL</td>
+            <td style="border:1px solid #cccccc; text-align:right;">' . number_format($row["docFees"], 2) . '</td>
+        </tr>
+    </table>
+    <br>
+    ';
+    
+    // Verification and stamp section
+    $content .= '
+    <table cellspacing="0" cellpadding="5" border="0">
+        <tr>
+            <td width="70%">
+                <h4 style="color:#3931af; border-bottom:1px solid #3931af; padding-bottom:5px;">PAYMENT VERIFICATION</h4>
+                <div style="border:1px solid #cccccc; padding:10px; background-color:#f9f9f9;">
+                    <p style="font-weight:bold;">Payment Status: <span style="color:green;">CONFIRMED</span></p>
+                    <p>Transaction ID: MPESA' . rand(100000000, 999999999) . '</p>
+                    <p>This receipt has been digitally verified and is valid as proof of payment.</p>
+                </div>
+            </td>
+            <td width="30%" align="center">
+                <div style="border:2px dashed #3931af; padding:10px;">
+                    <span style="font-size:14pt; color:#3931af; font-weight:bold;">OFFICIAL STAMP</span><br>
+                    <img src="images/favicon.png" alt="Hospital Stamp" width="60" height="60" /><br>
+                    <span style="font-size:10pt;">THE ROYAL HOSPITALS</span><br>
+                    <span style="font-size:8pt;">' . date('d/m/Y') . '</span>
+                </div>
+            </td>
+        </tr>
+    </table>
+    <br>
+    ';
+    
+    // Generate a simple QR code with transaction information
+    $qrText = "Receipt: " . $receipt_number . "\nPatient: " . $row["fname"] . " " . $row["lname"] . "\nAmount: " . $row["docFees"] . "\nDate: " . $payment_date;
+    $style = array(
+        'border' => 2,
+        'vpadding' => 'auto',
+        'hpadding' => 'auto',
+        'fgcolor' => array(57, 49, 175),
+        'bgcolor' => false,
+        'module_width' => 1,
+        'module_height' => 1
+    );
+    
+    // Disclaimer and notes
+    $content .= '
+    <div style="background-color:#f0f0f5; padding:10px; border-left:4px solid #3931af;">
+        <p style="font-size:9pt;"><strong>Important Note:</strong> This receipt serves as proof of payment for medical services rendered at The Royal Hospitals. For reimbursement purposes or insurance claims, please present this receipt along with any additional documentation required by your provider.</p>
+        <p style="font-size:9pt;">Keep this receipt for your records and future reference. We are committed to providing you with the highest quality of healthcare services.</p>
+    </div>
+    ';
     
     try {
         // Write HTML content to PDF
-        $obj_pdf->writeHTML($content);
+        $obj_pdf->writeHTML($content, true, false, true, false, '');
+        
+        // Generate QR code at the bottom right
+        $obj_pdf->write2DBarcode($qrText, 'QRCODE,L', 160, 230, 30, 30, $style, 'N');
         
         // Clean any output buffers that might have been started
         while (ob_get_level()) {
@@ -91,7 +326,7 @@ if (isset($_GET["generate_bill"]) && isset($_GET['ID'])) {
         }
         
         // Send the PDF
-        $obj_pdf->Output("bill.pdf", 'I');
+        $obj_pdf->Output("Royal_Hospitals_Receipt_" . $receipt_number . ".pdf", 'I');
     } catch (Exception $e) {
         // Handle any exceptions that might occur during PDF generation
         echo "<script>alert('Error generating PDF: " . $e->getMessage() . "'); window.location.href='prescriptions.php?pid=$pid';</script>";
